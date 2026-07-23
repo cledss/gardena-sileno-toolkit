@@ -1,5 +1,7 @@
 # gardena-sileno-toolkit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Small scripts to read live status (battery, activity, state) from GARDENA
 Sileno robotic mowers, for both connectivity tiers Gardena sells them with:
 
