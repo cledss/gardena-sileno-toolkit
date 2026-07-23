@@ -1,31 +1,42 @@
 import argparse
 import asyncio
+import sys
 
 import ble_patch
 
 ble_patch.apply()
 
 from automower_ble.mower import Mower
+from automower_ble.protocol import ResponseResult
 from bleak.backends.device import BLEDevice
 
 # Arbitrary but fixed channel id for this integration (matches upstream example).
 CHANNEL_ID = 1197489078
+
+MAX_ATTEMPTS = 5
+RETRY_DELAY_SECONDS = 3.0
 
 
 def bluez_object_path(adapter: str, address: str) -> str:
     return f"/org/bluez/{adapter}/dev_{address.upper().replace(':', '_')}"
 
 
-async def main(address: str, pin: int | None):
-    mower = Mower(CHANNEL_ID, address, pin)
-    # The name here is just a label for bleak/BlueZ logging - it doesn't need
-    # to match the mower's real name, which command() below fetches anyway.
-    device = BLEDevice(address, "Sileno", {"path": bluez_object_path("hci0", address)})
+async def reset_link(address: str):
+    """
+    Clear any stuck BlueZ connection state before retrying. This mower's BLE
+    link is unreliable enough (a known trait of this hardware/firmware, not
+    something fixable client-side - see ble/README.md) that a stale
+    half-open connection from a failed attempt can block the next one.
+    """
+    proc = await asyncio.create_subprocess_exec(
+        "bluetoothctl", "disconnect", address,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    await proc.wait()
 
-    print("Connecting...")
-    result = await mower.connect(device)
-    print(f"connect() result: {result}")
 
+async def read_status(mower: Mower):
     name = await mower.command("GetUserMowerNameAsAsciiString")
     manufacturer = await mower.get_manufacturer()
     model = await mower.get_model()
@@ -47,7 +58,38 @@ async def main(address: str, pin: int | None):
     else:
         print("Next start: none scheduled")
 
-    await mower.disconnect()
+
+async def try_once(address: str, pin: int | None):
+    mower = Mower(CHANNEL_ID, address, pin)
+    # The name here is just a label for bleak/BlueZ logging - it doesn't need
+    # to match the mower's real name, which command() below fetches anyway.
+    device = BLEDevice(address, "Sileno", {"path": bluez_object_path("hci0", address)})
+
+    result = await mower.connect(device)
+    if result != ResponseResult.OK:
+        raise RuntimeError(f"connect() returned {result}")
+
+    try:
+        await read_status(mower)
+    finally:
+        try:
+            await mower.disconnect()
+        except Exception:
+            pass
+
+
+async def main(address: str, pin: int | None):
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        print(f"Connecting (attempt {attempt}/{MAX_ATTEMPTS})...")
+        try:
+            await try_once(address, pin)
+            return
+        except Exception as exc:
+            print(f"Attempt {attempt} failed: {exc!r}")
+            if attempt == MAX_ATTEMPTS:
+                sys.exit(f"Giving up after {MAX_ATTEMPTS} attempts.")
+            await reset_link(address)
+            await asyncio.sleep(RETRY_DELAY_SECONDS)
 
 
 if __name__ == "__main__":

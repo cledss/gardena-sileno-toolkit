@@ -115,11 +115,29 @@ Read status:
 `--pin` is the mower's operator PIN (used for the app-layer
 `EnterOperatorPin` protocol command, separate from BLE pairing).
 
+## Reliability
+
+Even once bonded and reachable, this mower's BLE link is genuinely flaky -
+connections intermittently get locally aborted mid-handshake
+(`org.bluez.Error.Failed le-connection-abort-by-local`) or just hang. This
+appears to be a trait of the hardware/firmware itself (other users of
+similar Husqvarna/Gardena BLE mowers report the same "hit and miss"
+behavior), not something fixable client-side. `status.py` retries
+automatically (5 attempts by default, with a `bluetoothctl disconnect` reset
+between each) - if you're scripting against this yourself, expect to need
+the same.
+
+Also note: these mowers only support one active BLE connection at a time.
+If the Gardena app is currently connected from your phone, `status.py`'s
+connection attempt will fail with `org.bluez.Error.InProgress` until you
+close the app.
+
 ## Known limitations
 
 - Not yet packaged as a persistent service - each run does a fresh
   `bluetoothctl connect`. Should work fine wrapped in a loop/systemd
   service the same way as `wifi/watch.py`, just not done here yet.
-- The mower needs to be BLE-reachable (not dormant) when you run this.
+- The mower needs to be BLE-reachable (not dormant) when you run this - see
+  "Reliability" above.
 - Only tested against a Sileno; other Bluetooth-only Gardena/Husqvarna
   models may behave differently.
