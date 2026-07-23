@@ -132,6 +132,14 @@ If the Gardena app is currently connected from your phone, `status.py`'s
 connection attempt will fail with `org.bluez.Error.InProgress` until you
 close the app.
 
+And of course - it's a mower, not a stationary sensor. While it's actively
+mowing it physically moves around the garden and will be out of BLE range
+of your receiver for some fraction of that time, on top of the link
+flakiness above. Failed status reads while `activity` was last seen as
+`MOWING`/`GOING_HOME`/`GOING_OUT` are often just "it's currently too far
+away," not a bug - retry later or increase `MAX_ATTEMPTS`/`RETRY_DELAY_SECONDS`
+if you're polling on a schedule.
+
 ## Known limitations
 
 - Not yet packaged as a persistent service - each run does a fresh
