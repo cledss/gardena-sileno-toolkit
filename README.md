@@ -11,7 +11,7 @@ Sileno robotic mowers, for both connectivity tiers Gardena sells them with:
 Built and tested on a Raspberry Pi (Debian/Raspberry Pi OS), talking to a
 real GARDENA smart system account and a real Bluetooth-only Sileno.
 
-![Example status output](docs/status-example.png)
+![Example BLE status output](docs/ble-status-example.png)
 
 ## Why this exists
 
@@ -26,6 +26,8 @@ isn't. See [`ble/README.md`](ble/README.md) for the full story and the
 working fix.
 
 ## wifi/ - cloud-connected Sileno
+
+![Example WiFi status output](docs/wifi-status-example.png)
 
 1. Sign in at [developer.husqvarnagroup.cloud](https://developer.husqvarnagroup.cloud/)
    with your regular GARDENA account, create an application, and connect
