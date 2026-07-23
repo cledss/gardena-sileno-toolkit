@@ -11,6 +11,8 @@ Sileno robotic mowers, for both connectivity tiers Gardena sells them with:
 Built and tested on a Raspberry Pi (Debian/Raspberry Pi OS), talking to a
 real GARDENA smart system account and a real Bluetooth-only Sileno.
 
+![Example status output](docs/status-example.png)
+
 ## Why this exists
 
 The WiFi side is straightforward and has decent existing tooling (see
